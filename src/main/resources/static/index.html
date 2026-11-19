@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BorrowBox – College Item Lending & Borrowing</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2318181b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m7.5 4.27 9 5.15'/><path d='M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z'/><path d='m3.3 7 8.7 5 8.7-5'/><path d='M12 22V12'/></svg>">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header>
+    <div class="container header-content">
+      <div class="logo-area" onclick="switchTab('catalog')">
+        <div class="logo-icon">
+          <i data-lucide="package" class="icon-md"></i>
+        </div>
+        <div class="logo-text">
+          <span class="logo-title">BorrowBox</span>
+          <span class="logo-subtitle">College Item Sharing Platform</span>
+        </div>
+      </div>
+
+      <div class="nav-user" id="nav-user-container">
+        <!-- Injected via JavaScript based on auth state -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="container" style="flex: 1; padding-top: 1.5rem; padding-bottom: 3rem;">
+
+    <!-- Navigation Tabs -->
+    <div class="tabs-wrapper">
+      <div class="tabs-list">
+        <button class="tab-button active" id="tab-btn-catalog" onclick="switchTab('catalog')">
+          <i data-lucide="search" class="icon-sm"></i> Browse Catalog
+        </button>
+        <button class="tab-button" id="tab-btn-incoming" onclick="switchTab('incoming')">
+          <i data-lucide="inbox" class="icon-sm"></i> Incoming Requests <span class="tab-badge" id="badge-incoming-count" style="display: none;">0</span>
+        </button>
+        <button class="tab-button" id="tab-btn-myborrows" onclick="switchTab('myborrows')">
+          <i data-lucide="arrow-up-right" class="icon-sm"></i> My Borrows <span class="tab-badge" id="badge-borrows-count" style="display: none;">0</span>
+        </button>
+        <button class="tab-button" id="tab-btn-mylistings" onclick="switchTab('mylistings')">
+          <i data-lucide="layers" class="icon-sm"></i> My Listings
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 1: BROWSE CATALOG -->
+    <section id="view-catalog">
+      <!-- Search & Filter Controls -->
+      <div class="controls-bar">
+        <div class="controls-row">
+          <div class="search-input-wrapper">
+            <i data-lucide="search" class="search-icon icon-sm"></i>
+            <input type="text" id="search-keyword" class="input search-input" placeholder="Search by item name, book title, specs..." oninput="handleSearch()">
+          </div>
+
+          <div style="width: 160px;">
+            <select id="filter-condition" class="select" onchange="applyFilters()">
+              <option value="">All Conditions</option>
+              <option value="NEW">New</option>
+              <option value="GOOD">Good</option>
+              <option value="FAIR">Fair</option>
+            </select>
+          </div>
+
+          <div style="width: 160px;">
+            <select id="filter-status" class="select" onchange="applyFilters()">
+              <option value="">All Statuses</option>
+              <option value="AVAILABLE">Available</option>
+              <option value="BORROWED">Borrowed</option>
+              <option value="UNAVAILABLE">Unavailable</option>
+            </select>
+          </div>
+
+          <button class="btn btn-primary" onclick="openPostItemModal()">
+            <i data-lucide="plus" class="icon-sm"></i> Post Item
+          </button>
+        </div>
+
+        <!-- Category Filter Pills -->
+        <div class="category-pills" id="category-pills-list">
+          <button class="pill active" onclick="setCategoryFilter('', this)">All Categories</button>
+          <button class="pill" onclick="setCategoryFilter('TEXTBOOKS', this)">
+            <i data-lucide="book-open" class="icon-xs"></i> Textbooks
+          </button>
+          <button class="pill" onclick="setCategoryFilter('ELECTRONICS', this)">
+            <i data-lucide="cpu" class="icon-xs"></i> Electronics
+          </button>
+          <button class="pill" onclick="setCategoryFilter('LAB_EQUIPMENT', this)">
+            <i data-lucide="flask-conical" class="icon-xs"></i> Lab Equipment
+          </button>
+          <button class="pill" onclick="setCategoryFilter('CHARGERS', this)">
+            <i data-lucide="zap" class="icon-xs"></i> Chargers
+          </button>
+          <button class="pill" onclick="setCategoryFilter('SPORTS', this)">
+            <i data-lucide="trophy" class="icon-xs"></i> Sports
+          </button>
+          <button class="pill" onclick="setCategoryFilter('OTHER', this)">
+            <i data-lucide="package" class="icon-xs"></i> Other
+          </button>
+        </div>
+      </div>
+
+      <!-- Item Cards Grid -->
+      <div class="items-grid" id="catalog-items-grid">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- TAB 2: INCOMING REQUESTS (FOR OWNERS) -->
+    <section id="view-incoming" style="display: none;">
+      <div style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 style="font-size: 1.25rem; font-weight: 700;">Incoming Borrow Requests</h2>
+          <p style="font-size: 0.8125rem; color: var(--muted-foreground);">Requests from peers seeking to borrow items you listed</p>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="loadIncomingRequests()">
+          <i data-lucide="refresh-cw" class="icon-xs"></i> Refresh
+        </button>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Borrower</th>
+              <th>Dates</th>
+              <th>Status</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="incoming-requests-tbody">
+            <!-- Rendered via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 3: MY BORROWS (FOR BORROWERS) -->
+    <section id="view-myborrows" style="display: none;">
+      <div style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 style="font-size: 1.25rem; font-weight: 700;">My Borrow Requests & Active Loans</h2>
+          <p style="font-size: 0.8125rem; color: var(--muted-foreground);">Track your current borrow requests, due dates, and return statuses</p>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="loadMyBorrows()">
+          <i data-lucide="refresh-cw" class="icon-xs"></i> Refresh
+        </button>
+      </div>
+
+      <div id="overdue-banner-container"></div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Owner & Contact</th>
+              <th>Dates</th>
+              <th>Status</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="my-borrows-tbody">
+            <!-- Rendered via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 4: MY LISTINGS (MANAGE OWN ITEMS) -->
+    <section id="view-mylistings" style="display: none;">
+      <div style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2 style="font-size: 1.25rem; font-weight: 700;">My Listed Items</h2>
+          <p style="font-size: 0.8125rem; color: var(--muted-foreground);">Manage, edit, or toggle the availability of your personal inventory</p>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openPostItemModal()">
+          <i data-lucide="plus" class="icon-xs"></i> Post New Item
+        </button>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Category</th>
+              <th>Condition</th>
+              <th>Availability</th>
+              <th>Posted On</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="my-listings-tbody">
+            <!-- Rendered via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: AUTH (LOGIN & REGISTER) -->
+  <div class="modal-overlay" id="modal-auth">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="auth-modal-title">Sign In to BorrowBox</h3>
+        <button class="modal-close-btn" onclick="closeAuthModal()">
+          <i data-lucide="x" class="icon-sm"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Login Form -->
+        <form id="form-login" onsubmit="handleLoginSubmit(event)" style="display: flex; flex-direction: column; gap: 0.875rem;">
+          <div class="form-group">
+            <label class="form-label">Email or USN</label>
+            <input type="text" id="login-identifier" class="input" placeholder="e.g. arjun@college.edu or NNM24CS307" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" id="login-password" class="input" placeholder="••••••••" required>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem; width: 100%;">Sign In</button>
+
+          <!-- Quick Login for Demo -->
+          <div style="margin-top: 0.5rem; padding: 0.75rem; background: var(--muted); border-radius: var(--radius);">
+            <span style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 600; color: var(--muted-foreground);">
+              <i data-lucide="sparkles" class="icon-xs"></i> Quick Demo Sign-In:
+            </span>
+            <div class="quick-login-pills">
+              <span class="quick-pill" onclick="quickFillLogin('arjun@college.edu', 'password123')">Arjun (NNM24CS307)</span>
+              <span class="quick-pill" onclick="quickFillLogin('chinmay@college.edu', 'password123')">Chinmay (NNM24CS315)</span>
+              <span class="quick-pill" onclick="quickFillLogin('deon@college.edu', 'password123')">Deon (NNM24CS319)</span>
+            </div>
+          </div>
+
+          <div style="text-align: center; font-size: 0.8125rem; color: var(--muted-foreground); margin-top: 0.5rem;">
+            Don't have an account? <a href="javascript:void(0)" onclick="toggleAuthMode('register')" style="color: var(--foreground); font-weight: 600;">Register here</a>
+          </div>
+        </form>
+
+        <!-- Register Form -->
+        <form id="form-register" onsubmit="handleRegisterSubmit(event)" style="display: none; flex-direction: column; gap: 0.875rem;">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" id="reg-name" class="input" placeholder="e.g. Dev Kariappa" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">USN / College ID</label>
+            <input type="text" id="reg-usn" class="input" placeholder="e.g. NNM24CS366" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">College Email</label>
+            <input type="email" id="reg-email" class="input" placeholder="e.g. dev@college.edu" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone Number (Optional)</label>
+            <input type="tel" id="reg-phone" class="input" placeholder="e.g. 9876543210">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" id="reg-password" class="input" placeholder="At least 6 characters" minlength="6" required>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem; width: 100%;">Create Account</button>
+
+          <div style="text-align: center; font-size: 0.8125rem; color: var(--muted-foreground); margin-top: 0.5rem;">
+            Already registered? <a href="javascript:void(0)" onclick="toggleAuthMode('login')" style="color: var(--foreground); font-weight: 600;">Sign in here</a>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: POST / EDIT ITEM -->
+  <div class="modal-overlay" id="modal-item">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="item-modal-title">List an Item for Borrowing</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-item')">
+          <i data-lucide="x" class="icon-sm"></i>
+        </button>
+      </div>
+      <form id="form-item" onsubmit="handleItemFormSubmit(event)">
+        <input type="hidden" id="item-edit-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Title / Name *</label>
+            <input type="text" id="item-form-title" class="input" placeholder="e.g. Casio fx-991EX Calculator" required>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label class="form-label">Category *</label>
+              <select id="item-form-category" class="select" required>
+                <option value="TEXTBOOKS">Textbooks</option>
+                <option value="ELECTRONICS">Electronics</option>
+                <option value="LAB_EQUIPMENT">Lab Equipment</option>
+                <option value="CHARGERS">Chargers</option>
+                <option value="SPORTS">Sports</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Condition *</label>
+              <select id="item-form-condition" class="select" required>
+                <option value="NEW">New</option>
+                <option value="GOOD">Good</option>
+                <option value="FAIR">Fair</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea id="item-form-description" class="textarea" placeholder="Detail any specifications, edition, included accessories, or pickup spot..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Image URL (Optional)</label>
+            <input type="url" id="item-form-image" class="input" placeholder="https://images.unsplash.com/...">
+            <span class="form-hint">Tip: Paste any direct image link from Unsplash or web</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-item')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="item-form-submit-btn">Publish Listing</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ITEM DETAIL & BOOKING REQUEST -->
+  <div class="modal-overlay" id="modal-detail">
+    <div class="modal" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="detail-title">Item Details</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-detail')">
+          <i data-lucide="x" class="icon-sm"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="gap: 1.25rem;">
+        <!-- Image & Top Specs -->
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <div style="width: 140px; height: 140px; background: var(--muted); border-radius: var(--radius); overflow: hidden; flex-shrink: 0;" id="detail-img-box">
+            <img id="detail-img" src="" alt="Item" style="width: 100%; height: 100%; object-fit: cover;">
+          </div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+            <div style="display: flex; gap: 0.375rem; flex-wrap: wrap;" id="detail-badges"></div>
+            <p id="detail-desc" style="font-size: 0.875rem; color: var(--muted-foreground); line-height: 1.45;"></p>
+            <div style="padding: 0.5rem 0.75rem; background: var(--muted); border-radius: var(--radius); font-size: 0.75rem;">
+              <div style="font-weight: 600; color: var(--foreground);" id="detail-owner-name">Owner: Arjun Narayan</div>
+              <div style="color: var(--muted-foreground); display: flex; align-items: center; gap: 0.25rem; margin-top: 0.15rem;" id="detail-owner-reputation"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Booking Calendar / Existing Reserved Slots -->
+        <div id="detail-reserved-slots" style="padding: 0.75rem; border: 1px dashed var(--border); border-radius: var(--radius); font-size: 0.8125rem; display: none;">
+          <div style="display: flex; align-items: center; gap: 0.35rem; font-weight: 600; margin-bottom: 0.25rem; color: #b45309;">
+            <i data-lucide="calendar-clock" class="icon-xs"></i> Existing Bookings for this item:
+          </div>
+          <ul id="detail-slots-list" style="margin-left: 1.25rem; color: var(--muted-foreground);"></ul>
+        </div>
+
+        <!-- Borrow Request Form -->
+        <form id="form-borrow" onsubmit="handleBorrowSubmit(event)" style="border-top: 1px solid var(--border); padding-top: 1rem; display: flex; flex-direction: column; gap: 0.875rem;">
+          <input type="hidden" id="borrow-item-id">
+          <div style="font-weight: 600; font-size: 0.9375rem;">Select Borrowing Dates</div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label class="form-label">Start Date *</label>
+              <input type="date" id="borrow-start-date" class="input" required onchange="handleStartDateChange()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Return Date *</label>
+              <input type="date" id="borrow-end-date" class="input" required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="btn-submit-borrow" style="width: 100%; margin-top: 0.25rem;">
+            Submit Borrow Request
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: RATING & REVIEW -->
+  <div class="modal-overlay" id="modal-rating">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Rate Exchange Experience</h3>
+        <button class="modal-close-btn" onclick="closeModal('modal-rating')">
+          <i data-lucide="x" class="icon-sm"></i>
+        </button>
+      </div>
+      <form id="form-rating" onsubmit="handleRatingSubmit(event)">
+        <input type="hidden" id="rating-request-id">
+        <div class="modal-body">
+          <p style="font-size: 0.875rem; color: var(--muted-foreground);" id="rating-target-desc">
+            Rate your peer for this completed lending exchange.
+          </p>
+
+          <div class="form-group" style="align-items: center;">
+            <label class="form-label">Your Score (1 to 5 Stars)</label>
+            <div class="star-rating-select" id="star-selector">
+              <button type="button" class="star-btn" onclick="setStarScore(1)"><i data-lucide="star"></i></button>
+              <button type="button" class="star-btn" onclick="setStarScore(2)"><i data-lucide="star"></i></button>
+              <button type="button" class="star-btn" onclick="setStarScore(3)"><i data-lucide="star"></i></button>
+              <button type="button" class="star-btn" onclick="setStarScore(4)"><i data-lucide="star"></i></button>
+              <button type="button" class="star-btn active" onclick="setStarScore(5)"><i data-lucide="star"></i></button>
+            </div>
+            <input type="hidden" id="rating-score-val" value="5">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Feedback / Review (Optional)</label>
+            <textarea id="rating-comment" class="textarea" placeholder="e.g. Prompt return, item was well maintained, great communication!"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-rating')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Submit Rating</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- Lucide Icons & Application Script -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
